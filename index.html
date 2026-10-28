@@ -1,0 +1,540 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style></head><body>
+<title>Tablero del Bar</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: una columna de lectura (carga de reportes, ajustes, resumen, lectura rápida, gráficos en dos columnas que se apilan, tablas al final). */
+:root{
+  --bg:#F2F6F5; --surface:#FFFFFF; --ink:#12262A; --muted:#566A6E; --line:#D6E0DE;
+  --accent:#0F6B66; --accent-ink:#FFFFFF; --bar:#A9CBC6; --bar-hi:#0F6B66;
+  --good:#2E7D4F; --good-bg:#E2F1E8; --warn:#8F5E0F; --warn-bg:#F8ECD2; --crit:#B3382C; --crit-bg:#F9E1DD;
+  --f-display:'Bricolage Grotesque','Segoe UI',system-ui,sans-serif;
+  --f-body:'IBM Plex Sans','Segoe UI',system-ui,sans-serif;
+  --f-mono:'IBM Plex Mono',ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0E1B1E; --surface:#15262A; --ink:#E6EFEE; --muted:#8FA6A8; --line:#26393D;
+  --accent:#4FB5AC; --accent-ink:#0E1B1E; --bar:#2C5A58; --bar-hi:#4FB5AC;
+  --good:#5CC38A; --good-bg:#183326; --warn:#E0A84A; --warn-bg:#3A2D12; --crit:#F0786B; --crit-bg:#3E1D19; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0E1B1E; --surface:#15262A; --ink:#E6EFEE; --muted:#8FA6A8; --line:#26393D;
+  --accent:#4FB5AC; --accent-ink:#0E1B1E; --bar:#2C5A58; --bar-hi:#4FB5AC;
+  --good:#5CC38A; --good-bg:#183326; --warn:#E0A84A; --warn-bg:#3A2D12; --crit:#F0786B; --crit-bg:#3E1D19; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 48px}
+.wrap{max-width:1040px;margin:0 auto;display:flex;flex-direction:column;gap:20px}
+h1,h2{font-family:var(--f-display);text-wrap:balance;margin:0}
+h1{font-size:clamp(28px,5vw,40px);line-height:1.1;font-weight:700;letter-spacing:-.01em}
+h2{font-size:18px;font-weight:700}
+.sub{color:var(--muted);margin:6px 0 0}
+.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.banner{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px;display:flex;flex-direction:column;gap:12px}
+.banner.sample{border-color:var(--warn)}
+.banner .row{display:flex;gap:14px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.banner p{margin:0;min-width:0;flex:1 1 280px}
+.banner .acts{display:flex;gap:10px;flex-wrap:wrap}
+.tag{display:inline-block;font-size:11px;letter-spacing:.08em;text-transform:uppercase;font-weight:600;padding:2px 8px;border-radius:99px}
+.tag.s{background:var(--warn-bg);color:var(--warn)} .tag.r{background:var(--good-bg);color:var(--good)}
+.btn{display:inline-block;font:inherit;font-weight:600;background:var(--accent);color:var(--accent-ink);border:0;border-radius:8px;padding:10px 16px;cursor:pointer}
+.btn.alt{background:transparent;color:var(--ink);border:1px solid var(--line)}
+.btn:focus-visible,input:focus-visible+.btn{outline:3px solid var(--ink);outline-offset:2px}
+#file{position:absolute;opacity:0;width:1px;height:1px}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin:0;padding:0;list-style:none}
+.chip{font-size:13px;padding:3px 10px;border-radius:99px;border:1px solid var(--line);color:var(--muted)}
+.chip.on{background:var(--good-bg);color:var(--good);border-color:transparent}
+.chip b{font-weight:600}
+.err{background:var(--crit-bg);color:var(--crit);border-radius:8px;padding:10px 14px;margin:0}
+.set{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px;display:grid;grid-template-columns:1fr 1fr;gap:16px 24px}
+.set fieldset{border:0;margin:0;padding:0;min-width:0}
+.set legend{font-weight:600;padding:0;margin-bottom:6px}
+.set label{display:inline-flex;align-items:center;gap:6px;margin-right:16px}
+.set input[type=number]{font:inherit;width:84px;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink)}
+.set input:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.set .hint{grid-column:1/-1;margin:0;color:var(--muted);font-size:13px}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px;min-width:0}
+.kpi .l{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.kpi .v{font-family:var(--f-mono);font-size:clamp(20px,3.4vw,28px);font-weight:500;margin-top:2px;overflow-wrap:anywhere}
+.kpi .n{font-size:12px;color:var(--muted);margin-top:2px}
+.read{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px 18px}
+.read ul{margin:10px 0 0;padding-left:18px;display:flex;flex-direction:column;gap:6px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px 18px;min-width:0}
+.card .cap{color:var(--muted);font-size:13px;margin:4px 0 14px}
+.cols{display:flex;align-items:flex-end;gap:3px;height:150px;border-bottom:1px solid var(--line)}
+.col{flex:1 1 0;min-width:0;background:var(--bar);border-radius:3px 3px 0 0}
+.col.hi{background:var(--bar-hi)}
+.axis{display:flex;gap:3px;margin-top:4px}
+.axis span{flex:1 1 0;min-width:0;text-align:center;font-family:var(--f-mono);font-size:10px;color:var(--muted)}
+.hbars{display:flex;flex-direction:column;gap:9px}
+.hb{display:grid;grid-template-columns:minmax(0,9.5em) 1fr auto;gap:10px;align-items:center;font-size:13px}
+.hb .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hb .tr{background:var(--bg);border-radius:4px;height:14px;overflow:hidden}
+.hb .fi{display:block;height:100%;background:var(--bar-hi);border-radius:4px}
+.pay{display:flex;height:18px;border-radius:5px;overflow:hidden;margin:2px 0 10px}
+.pay i{display:block;height:100%}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:13px}
+.legend b{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px}
+.tw{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{text-align:left;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600;padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:9px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+td.r,th.r{text-align:right}
+tr:last-child td{border-bottom:0}
+.pill{display:inline-block;font-size:12px;font-weight:600;padding:2px 9px;border-radius:99px}
+.pill.good{background:var(--good-bg);color:var(--good)} .pill.warn{background:var(--warn-bg);color:var(--warn)} .pill.crit{background:var(--crit-bg);color:var(--crit)} .pill.none{background:var(--bg);color:var(--muted)}
+.empty{color:var(--muted);margin:0}
+details.how{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 18px}
+details.how summary{cursor:pointer;font-weight:600}
+details.how summary:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
+details.how .in{display:flex;flex-direction:column;gap:10px;margin-top:10px}
+details.how ol,details.how ul{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:4px}
+details.how p{margin:0}
+.foot{color:var(--muted);font-size:13px;margin:0}
+@media (max-width:760px){.kpis{grid-template-columns:1fr 1fr}.grid2{grid-template-columns:1fr}.set{grid-template-columns:1fr}}
+@media (prefers-reduced-motion:no-preference){.col,.hb .fi{transition:height .25s ease,width .25s ease}}
+</style>
+
+<div class="wrap" id="app">
+  <div>
+    <h1>Tablero del Bar</h1>
+    <p class="sub" id="range">&nbsp;</p>
+  </div>
+
+  <section class="banner sample" id="banner" aria-label="Datos cargados">
+    <div class="row">
+      <p id="banner-msg"></p>
+      <div class="acts">
+        <label style="position:relative"><input type="file" id="file" accept=".xlsx,.xls,.xlsm,.csv" multiple><span class="btn" role="button">Cargar reportes de Negosy</span></label>
+        <button type="button" class="btn alt" id="reset" hidden>Ver el ejemplo</button>
+      </div>
+    </div>
+    <ul class="chips" id="chips"></ul>
+  </section>
+  <p class="err" id="err" role="alert" hidden></p>
+
+  <details class="how">
+    <summary>Qué reportes de Negosy subir</summary>
+    <div class="in">
+      <p>En Negosy abre Reportes, elige el reporte, filtra el rango de fechas y expórtalo a Excel. Puedes subir varios archivos a la vez. El tablero reconoce cada uno por los nombres de sus columnas, no por su posición.</p>
+      <ul>
+        <li><b>Ganancias</b> (recomendado): da el costo y la ganancia de cada venta. Alimenta la tabla de margen.</li>
+        <li><b>Ventas por productos</b>: ventas por día y lo más vendido. Si no lo subes, se usa Ganancias.</li>
+        <li><b>Reporte de ventas</b> o <b>Ventas por método de pago</b>: muestra cómo pagan.</li>
+        <li><b>Stock de productos</b>: calcula para cuántos días alcanza cada producto.</li>
+      </ul>
+      <p>Las columnas esperadas salen del centro de ayuda de Negosy y falta confirmarlas con un archivo exportado de verdad. Si un archivo no se reconoce, el aviso indica qué falta.</p>
+    </div>
+  </details>
+
+  <section class="set" aria-label="Ajustes del cálculo">
+    <fieldset>
+      <legend>Costos cargados en Negosy</legend>
+      <label><input type="radio" name="igv" id="igv-ex" value="ex" checked> Sin IGV</label>
+      <label><input type="radio" name="igv" id="igv-in" value="in"> Con IGV</label>
+    </fieldset>
+    <div>
+      <label for="min-margin" style="font-weight:600;display:block;margin-bottom:6px">Margen mínimo aceptable</label>
+      <input type="number" id="min-margin" min="0" max="95" step="5" value="60"> <span class="mono">%</span>
+    </div>
+    <p class="hint">Negosy calcula la ganancia como Importe menos Costo, y el Importe incluye IGV. Si tus costos no incluyen IGV, la ganancia de Negosy sale más alta que la real. El margen mínimo es un valor de ejemplo hasta que el dueño defina el suyo.</p>
+  </section>
+
+  <section class="kpis" id="kpis" aria-label="Resumen"></section>
+  <section class="read" id="read" aria-label="Lectura rápida"></section>
+  <section class="grid2">
+    <div class="card"><h2>Ventas por día</h2><p class="cap" id="cap-day"></p><div class="cols" id="cols-day"></div><div class="axis" id="axis-day"></div></div>
+    <div class="card"><h2>Ventas por día de la semana</h2><p class="cap" id="cap-wk"></p><div class="cols" id="cols-wk"></div><div class="axis" id="axis-wk"></div></div>
+  </section>
+  <section class="grid2">
+    <div class="card"><h2>Lo más vendido</h2><p class="cap">Unidades en el periodo</p><div class="hbars" id="top"></div></div>
+    <div class="card"><h2>Cómo pagan</h2><p class="cap" id="cap-pay">Participación en las ventas</p><div id="pay"></div></div>
+  </section>
+  <section class="card"><h2>Margen por producto</h2><p class="cap" id="cap-margin"></p><div class="tw"><table id="t-margin"></table></div></section>
+  <section class="card"><h2>Stock y días de venta</h2><p class="cap" id="cap-stock"></p><div class="tw"><table id="t-stock"></table></div></section>
+  <p class="foot">Los cálculos se hacen en tu navegador. Los archivos que cargas no se envían ni se guardan en ningún servidor.</p>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script id="logic">
+/* ---------- Lógica de datos (sin DOM) ---------- */
+var BarLogic=(function(){
+  var NORM=function(s){return String(s==null?'':s).normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,'')};
+  var COMP=['comprobante','nro_comprobante','n_comprobante','documento','codigo_venta','cod_venta'];
+  var FECHA=['fecha','fecha_emision','fecha_venta'];
+  var PROD=['producto','descripcion','articulo','item'];
+  /* Orden de prioridad: el que más exige va primero (Ganancias trae costo, Pagos trae M.Pago). */
+  var KINDS=[
+    {kind:'ganancias',label:'Ganancias',req:['fecha','producto','cantidad','importe','costo'],
+      cols:{comprobante:COMP,fecha:FECHA,producto:PROD,cantidad:['cant','cantidad'],subtotal:['subtotal','sub_total'],igv:['igv'],importe:['importe','total'],costo:['costo','costo_total'],ganancia:['ganancia','utilidad']}},
+    {kind:'pagos',label:'Reporte de ventas',req:['fecha','pago','total'],
+      cols:{comprobante:COMP,fecha:FECHA,pago:['m_pago','metodo_pago','metodo_de_pago','forma_de_pago','medio_de_pago'],total:['total','importe'],pagado:['pagado'],estado:['estado']}},
+    {kind:'stock',label:'Stock de productos',req:['producto','stock'],
+      cols:{producto:PROD,categoria:['categoria','linea'],precio:['precio','precio_venta'],stock:['stock','stock_actual','existencias']}},
+    {kind:'ventas',label:'Ventas por productos',req:['fecha','producto','cantidad','total'],
+      cols:{comprobante:COMP,fecha:FECHA,producto:PROD,precio:['precio_sin_dcto','precio_sin_descuento','precio','precio_unitario'],descuento:['descuento','dcto'],cantidad:['cantidad','cant','unidades'],total:['total','importe']}}
+  ];
+  var DOW=['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
+  var MES=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+
+  function str(v){return String(v==null?'':v).trim()}
+  function num(v){
+    if(typeof v==='number') return isFinite(v)?v:0;
+    var s=String(v==null?'':v).replace(/[^0-9.,\-]/g,'');
+    if(s.indexOf(',')>-1&&s.indexOf('.')>-1) s=s.replace(/,/g,'');
+    else if(s.indexOf(',')>-1){ s=/,\d{1,2}$/.test(s)?s.replace(',','.'):s.replace(/,/g,'') }
+    var n=parseFloat(s);return isFinite(n)?n:0;
+  }
+  function pad(n){return (n<10?'0':'')+n}
+  function dateKey(v){
+    var d=null;
+    if(v instanceof Date){d=new Date(v.getTime()+12*3600*1000)}
+    else if(typeof v==='number'){d=new Date(Math.round((v-25569)*86400000)+12*3600*1000)}
+    else if(typeof v==='string'){
+      var m=v.match(/(\d{4})-(\d{1,2})-(\d{1,2})/);
+      if(m) return m[1]+'-'+pad(+m[2])+'-'+pad(+m[3]);
+      m=v.match(/(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})/);
+      if(m){var y=+m[3];if(y<100)y+=2000;return y+'-'+pad(+m[2])+'-'+pad(+m[1])}
+      return null;
+    }
+    if(!d||isNaN(d)) return null;
+    return d.getUTCFullYear()+'-'+pad(d.getUTCMonth()+1)+'-'+pad(d.getUTCDate());
+  }
+  function labelDay(k){var p=k.split('-');return +p[2]+' '+MES[+p[1]-1]}
+  function dow(k){return new Date(k+'T12:00:00Z').getUTCDay()}
+
+  /* Busca la fila de encabezados y decide qué reporte es. aoa = filas como listas de celdas. */
+  function detect(aoa){
+    for(var i=0;i<Math.min(aoa.length,25);i++){
+      var heads=(aoa[i]||[]).map(NORM);
+      for(var k=0;k<KINDS.length;k++){
+        var K=KINDS[k],map={};
+        Object.keys(K.cols).forEach(function(c){
+          for(var a=0;a<K.cols[c].length;a++){var ix=heads.indexOf(K.cols[c][a]);if(ix>-1){map[c]=ix;break}}
+        });
+        if(K.req.every(function(c){return map[c]!==undefined})) return {kind:K.kind,header:i,map:map};
+      }
+    }
+    return null;
+  }
+  function toRows(det,aoa){
+    var out=[];
+    for(var i=det.header+1;i<aoa.length;i++){
+      var row=aoa[i]||[],o={},any=false;
+      Object.keys(det.map).forEach(function(c){var v=row[det.map[c]];o[c]=v===undefined?'':v;if(v!==undefined&&v!=='')any=true});
+      if(!any) continue;
+      if(o.fecha!==undefined&&!dateKey(o.fecha)) continue;       // filas de totales o notas
+      if(o.producto!==undefined&&!str(o.producto)) continue;
+      out.push(o);
+    }
+    return out;
+  }
+  /* sheets: [{name, aoa}] -> tablas por tipo de reporte */
+  function readSheets(sheets){
+    var tables={ventas:[],ganancias:[],pagos:[],stock:[]},found={},unknown=[];
+    sheets.forEach(function(s){
+      if(!s.aoa||!s.aoa.length) return;
+      var det=detect(s.aoa);
+      if(!det){unknown.push(s.name);return}
+      var rows=toRows(det,s.aoa);
+      tables[det.kind]=tables[det.kind].concat(rows);
+      found[det.kind]=(found[det.kind]||0)+rows.length;
+    });
+    return {tables:tables,found:found,unknown:unknown};
+  }
+  function readWorkbook(XLSX,wb){
+    return readSheets(wb.SheetNames.map(function(n){
+      return {name:n,aoa:XLSX.utils.sheet_to_json(wb.Sheets[n],{header:1,defval:'',raw:true})};
+    }));
+  }
+  function aoaFromObjects(rows){
+    if(!rows.length) return [];
+    var keys=Object.keys(rows[0]);
+    return [keys].concat(rows.map(function(r){return keys.map(function(k){return r[k]})}));
+  }
+
+  function compute(d,o){
+    o=o||{};
+    var costIncl=!!o.costIncl, minM=o.minMargin==null?0.6:o.minMargin;
+    var src=d.ventas.length?d.ventas.map(function(r){return {k:dateKey(r.fecha),p:str(r.producto),q:num(r.cantidad),t:num(r.total)}})
+      :d.ganancias.map(function(r){return {k:dateKey(r.fecha),p:str(r.producto),q:num(r.cantidad),t:num(r.importe)}});
+    var days={},prods={},total=0,units=0,lines=0;
+    src.forEach(function(r){
+      if(!r.k||!r.p||!(r.q>0)) return;
+      lines++;total+=r.t;units+=r.q;
+      days[r.k]=(days[r.k]||0)+r.t;
+      var pr=prods[NORM(r.p)]||(prods[NORM(r.p)]={name:r.p,units:0,revenue:0});pr.units+=r.q;pr.revenue+=r.t;
+    });
+    var dlist=Object.keys(days).sort().map(function(k){return {date:k,total:days[k],dow:dow(k)}});
+    var wkSum=[0,0,0,0,0,0,0],wkN=[0,0,0,0,0,0,0];
+    dlist.forEach(function(x){wkSum[x.dow]+=x.total;wkN[x.dow]++});
+    var wk=[1,2,3,4,5,6,0].map(function(w){return {dow:w,sum:wkSum[w],n:wkN[w],avg:wkN[w]?wkSum[w]/wkN[w]:0}});
+
+    /* Margen desde Ganancias */
+    var gp={},gan_neg=0;
+    d.ganancias.forEach(function(r){
+      var p=str(r.producto),q=num(r.cantidad);if(!p||!(q>0))return;
+      var imp=num(r.importe),sub=num(r.subtotal)||imp/1.18,cost=num(r.costo);
+      var g=gp[NORM(p)]||(gp[NORM(p)]={name:p,units:0,importe:0,sub:0,costo:0,gan:0});
+      g.units+=q;g.importe+=imp;g.sub+=sub;g.costo+=cost;g.gan+=(r.ganancia===''||r.ganancia===undefined)?(imp-cost):num(r.ganancia);
+    });
+    var mlist=Object.keys(gp).map(function(n){
+      var g=gp[n];g.hasCost=g.costo>0;
+      g.base=costIncl?g.importe:g.sub;
+      g.avgPrice=g.units?g.base/g.units:0;
+      if(g.hasCost){g.unitCost=g.costo/g.units;g.profit=g.base-g.costo;g.marginPct=g.base?g.profit/g.base:0;g.profitIncl=g.importe-g.costo}
+      return g});
+    var withCost=mlist.filter(function(g){return g.hasCost});
+    var sumBase=0,sumProfit=0,sumBaseAll=0,negosyProfit=0;
+    mlist.forEach(function(g){sumBaseAll+=g.base});
+    withCost.forEach(function(g){sumBase+=g.base;sumProfit+=g.profit;negosyProfit+=g.profitIncl});
+
+    /* Pagos */
+    var pays={},ptotal=0;
+    d.pagos.forEach(function(r){
+      if(/anula/i.test(str(r.estado)))return;
+      var m=str(r.pago)||'Sin dato',t=num(r.total);pays[m]=(pays[m]||0)+t;ptotal+=t});
+    var paylist=Object.keys(pays).map(function(n){return {name:n,total:pays[n]}}).sort(function(a,b){return b.total-a.total});
+
+    /* Stock: para cuántos días de venta alcanza */
+    var nd=dlist.length||1;
+    var slist=d.stock.map(function(r){
+      var name=str(r.producto),st=(r.stock===''||r.stock===undefined)?null:num(r.stock);
+      var pr=prods[NORM(name)],rate=pr?pr.units/nd:0;
+      var cover=(st!==null&&rate>0)?st/rate:null,status,label;
+      if(st===null){status='none';label='Sin stock cargado'}
+      else if(st<=0){status='crit';label='Agotado'}
+      else if(cover===null){status='none';label='Sin ventas'}
+      else if(cover<3){status='crit';label='Por agotarse'}
+      else if(cover<7){status='warn';label='Bajo'}
+      else {status='good';label='OK'}
+      return {name:name,stock:st,rate:rate,cover:cover,status:status,label:label};
+    }).sort(function(a,b){
+      var ra=a.status==='crit'&&a.stock===0?-1:(a.cover===null?999:a.cover),rb=b.status==='crit'&&b.stock===0?-1:(b.cover===null?999:b.cover);
+      return ra-rb});
+
+    return {
+      minM:minM,costIncl:costIncl,source:d.ventas.length?'ventas':(d.ganancias.length?'ganancias':null),
+      kpi:{total:total,units:units,lines:lines,days:dlist.length,
+        marginPct:sumBase?sumProfit/sumBase:null,profit:sumProfit,negosyProfit:negosyProfit,coverage:sumBaseAll?sumBase/sumBaseAll:0,
+        crit:slist.filter(function(s){return s.status==='crit'}).length,low:slist.filter(function(s){return s.status==='warn'}).length},
+      days:dlist,wk:wk,prods:Object.keys(prods).map(function(n){return prods[n]}),margin:mlist,pays:paylist,ptotal:ptotal,stock:slist
+    };
+  }
+
+  /* ---------- Datos de ejemplo con encabezados como los de Negosy ---------- */
+  function makeSample(){
+    var seed=20261001;
+    function rnd(){seed|=0;seed=seed+0x6D2B79F5|0;var t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}
+    function r2(x){return Math.round(x*100)/100}
+    var P=[
+      {n:'Cerveza Cusqueña 330 ml',cat:'Cerveza',p:12,c:4.0,w:6,sd:1.6},
+      {n:'Cerveza artesanal pinta',cat:'Cerveza',p:18,c:7.0,w:3,sd:5},
+      {n:'Pisco Sour',cat:'Coctel',p:24,c:6.0,w:3,sd:null},
+      {n:'Gin Tonic',cat:'Coctel',p:26,c:12.5,w:2,sd:null},
+      {n:'Ron con Cola',cat:'Trago',p:18,c:5.0,w:2,sd:null},
+      {n:'Tequeños x6',cat:'Piqueo',p:22,c:4.0,w:2,sd:0},
+      {n:'Alitas BBQ x8',cat:'Piqueo',p:32,c:11.0,w:2,sd:10},
+      {n:'Papas fritas',cat:'Piqueo',p:14,c:2.5,w:2,sd:25},
+      {n:'Nachos con queso',cat:'Piqueo',p:20,c:0,w:1,sd:8}
+    ];
+    var W=P.reduce(function(a,x){return a+x.w},0);
+    function pick(skip){for(;;){var r=rnd()*W,i=0;for(;i<P.length;i++){r-=P[i].w;if(r<0)break}i=Math.min(i,P.length-1);if(!skip[i])return i}}
+    var perDay={0:12,1:0,2:6,3:9,4:14,5:24,6:30},mp=['Efectivo','Yape/Plin','Tarjeta'],mw=[0.38,0.34,0.28];
+    var V=[],G=[],R=[],seq=0,units={},open=0;
+    for(var d=1;d<=25;d++){
+      var wd=new Date(Date.UTC(2026,9,d)).getUTCDay(),n=perDay[wd];if(!n)continue;open++;
+      n=Math.round(n*(0.85+rnd()*0.3));
+      var fecha=pad(d)+'/10/2026';
+      for(var c=0;c<n;c++){
+        seq++;var cod='B001-'+('00000'+seq).slice(-5),nl=1+Math.floor(rnd()*3.2),used={},tot=0,rows=[];
+        for(var l=0;l<nl;l++){
+          var i=pick(used);used[i]=1;var x=P[i],q=1+Math.floor(rnd()*(x.cat==='Cerveza'?4:2)),imp=r2(x.p*q),sub=r2(imp/1.18),cost=r2(x.c*q);
+          tot+=imp;rows.push({i:i,q:q,imp:imp,sub:sub,cost:cost});
+        }
+        var rr=rnd(),m=rr<mw[0]?0:(rr<mw[0]+mw[1]?1:2),anul=rnd()<0.02;
+        R.push({'Comprobante':cod,'Fecha':fecha,'Dni/Ruc':'','Cliente':'Clientes varios','M.Pago':mp[m],'Tipo':'Boleta','Total':r2(tot),'Pagado':anul?0:r2(tot),'Estado':anul?'Anulado':'Pagado'});
+        if(anul)continue;
+        rows.forEach(function(w){
+          var x=P[w.i];units[x.n]=(units[x.n]||0)+w.q;
+          V.push({'Fecha':fecha,'Comprobante':cod,'Producto':x.n,'Precio sin Dcto':x.p,'Descuento':0,'Cantidad':w.q,'Total':w.imp});
+          G.push({'Comprobante':cod,'Fecha':fecha,'Producto':x.n,'Cant.':w.q,'Subtotal':w.sub,'IGV':r2(w.imp-w.sub),'ISC':0,'Importe':w.imp,'Precio Prom.':x.c,'Costo':w.cost,'Ganancia':r2(w.imp-w.cost)});
+        });
+      }
+    }
+    var S=P.map(function(x){
+      var st=x.sd===null?'':Math.round((units[x.n]||0)/open*x.sd);
+      return {'Producto':x.n,'Categoría':x.cat,'Precio':x.p,'Stock':st};
+    });
+    return [{name:'Ventas por productos',aoa:aoaFromObjects(V)},{name:'Ganancias',aoa:aoaFromObjects(G)},{name:'Reporte de ventas',aoa:aoaFromObjects(R)},{name:'Stock de productos',aoa:aoaFromObjects(S)}];
+  }
+
+  return {compute:compute,readWorkbook:readWorkbook,readSheets:readSheets,detect:detect,makeSample:makeSample,labelDay:labelDay,DOW:DOW,KINDS:KINDS};
+})();
+if(typeof module!=='undefined') module.exports=BarLogic;
+</script>
+
+<script>
+/* ---------- Interfaz ---------- */
+(function(){
+  var $=function(id){return document.getElementById(id)};
+  var L=BarLogic;
+  var state={tables:null,meta:null};
+  var KLABEL={ventas:'Ventas por productos',ganancias:'Ganancias',pagos:'Reporte de ventas',stock:'Stock de productos'};
+  function esc(s){return String(s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+  function money(n){return 'S/ '+Math.round(n).toLocaleString('es-PE')}
+  function money2(n){return 'S/ '+n.toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2})}
+  function pct(x){return Math.round(x*100)+'%'}
+  function cap(s){return s.charAt(0).toUpperCase()+s.slice(1)}
+  function oneDec(x){return x.toLocaleString('es-PE',{minimumFractionDigits:1,maximumFractionDigits:1})}
+
+  function cols(elId,axisId,items){
+    var max=Math.max.apply(null,items.map(function(i){return i.v}).concat([1]));
+    $(elId).innerHTML=items.map(function(i){
+      var hi=i.v===max?' hi':'';
+      return '<div class="col'+hi+'" style="height:'+Math.max(2,i.v/max*100)+'%" title="'+esc(i.tip)+'"></div>'}).join('');
+    $(axisId).innerHTML=items.map(function(i){return '<span>'+esc(i.ax)+'</span>'}).join('');
+  }
+  function options(){
+    var m=parseFloat($('min-margin').value);
+    return {costIncl:$('igv-in').checked,minMargin:isFinite(m)?Math.min(95,Math.max(0,m))/100:0.6};
+  }
+
+  function render(){
+    var r=L.compute(state.tables,options()),k=r.kpi,meta=state.meta,T=state.tables;
+    $('range').textContent=r.days.length?('Del '+L.labelDay(r.days[0].date)+' al '+L.labelDay(r.days[r.days.length-1].date)+' · '+k.days+' días con ventas'):'Sin ventas en los archivos';
+
+    // Banner y reportes cargados
+    var b=$('banner');b.className='banner'+(meta.sample?' sample':'');
+    $('banner-msg').innerHTML=meta.sample
+      ?'<span class="tag s">Datos de ejemplo</span> Estas cifras son inventadas para mostrar cómo se ve el tablero. Sube tus reportes de Negosy en Excel para ver los números reales.'
+      :'<span class="tag r">Datos reales</span> Archivos: <b>'+esc(meta.name)+'</b>';
+    $('reset').hidden=!!meta.sample;
+    $('chips').innerHTML=['ganancias','ventas','pagos','stock'].map(function(kind){
+      var n=T[kind].length;
+      return '<li class="chip'+(n?' on':'')+'"><b>'+KLABEL[kind]+'</b> '+(n?'· '+n.toLocaleString('es-PE')+' filas':'· falta')+'</li>'}).join('');
+
+    // KPIs
+    var stRisk=k.crit+k.low;
+    $('kpis').innerHTML=
+      '<div class="kpi"><div class="l">Ventas</div><div class="v">'+money(k.total)+'</div><div class="n">'+k.lines.toLocaleString('es-PE')+' líneas de venta</div></div>'+
+      '<div class="kpi"><div class="l">Promedio por día</div><div class="v">'+money(k.days?k.total/k.days:0)+'</div><div class="n">'+Math.round(k.units).toLocaleString('es-PE')+' unidades</div></div>'+
+      '<div class="kpi"><div class="l">Margen</div><div class="v">'+(k.marginPct===null?'—':pct(k.marginPct))+'</div><div class="n">'+(k.marginPct===null?(T.ganancias.length?'Faltan costos en Negosy':'Sube el reporte Ganancias'):money(k.profit)+' de ganancia · costo cargado en '+pct(k.coverage)+' de las ventas')+'</div></div>'+
+      '<div class="kpi"><div class="l">Stock en riesgo</div><div class="v">'+(T.stock.length?stRisk:'—')+'</div><div class="n">'+(T.stock.length?k.crit+' crítico'+(k.crit===1?'':'s')+' · '+k.low+' bajo'+(k.low===1?'':'s'):'Sube Stock de productos')+'</div></div>';
+
+    // Lectura rápida
+    var notes=[];
+    if(k.total){
+      var wd=r.wk.slice().sort(function(a,b){return b.sum-a.sum});
+      notes.push('<b>'+cap(L.DOW[wd[0].dow])+' y '+L.DOW[wd[1].dow]+'</b> concentran '+pct((wd[0].sum+wd[1].sum)/k.total)+' de las ventas.');
+      var tp=r.prods.slice().sort(function(a,b){return b.units-a.units})[0];
+      if(tp) notes.push('Lo más vendido es <b>'+esc(tp.name)+'</b>, con '+Math.round(tp.units).toLocaleString('es-PE')+' unidades.');
+    }
+    var wc=r.margin.filter(function(g){return g.hasCost}).sort(function(a,b){return a.marginPct-b.marginPct});
+    if(wc.length&&wc[0].marginPct<r.minM) notes.push('<b>'+esc(wc[0].name)+'</b> deja solo '+pct(wc[0].marginPct)+' de margen, bajo tu mínimo de '+pct(r.minM)+'. Revisa su precio o su costo.');
+    var nc=r.margin.filter(function(g){return !g.hasCost});
+    if(nc.length) notes.push(nc.length+' producto'+(nc.length>1?'s':'')+' sin costo cargado en Negosy ('+esc(nc.slice(0,3).map(function(g){return g.name}).join(', '))+(nc.length>3?'…':'')+'). Su margen no se puede calcular.');
+    if(!r.costIncl&&k.marginPct!==null&&k.negosyProfit-k.profit>0.5) notes.push('Negosy muestra '+money(k.negosyProfit)+' de ganancia en los productos con costo. Si tus costos no incluyen IGV, la real es '+money(k.profit)+'.');
+    var cr=r.stock.filter(function(s){return s.status==='crit'});
+    if(cr.length) notes.push('Reponer ya: <b>'+esc(cr.slice(0,3).map(function(s){return s.name}).join(', '))+'</b>'+(cr.length>3?' y '+(cr.length-3)+' más':'')+'.');
+    if(!notes.length) notes.push('Sube más reportes para ver más lecturas.');
+    $('read').innerHTML='<h2>Lectura rápida</h2><ul>'+notes.map(function(n){return '<li>'+n+'</li>'}).join('')+'</ul>';
+
+    // Por día
+    var dl=r.days.slice(-21);
+    cols('cols-day','axis-day',dl.map(function(d){return {v:d.total,ax:d.date.slice(8),tip:L.labelDay(d.date)+' ('+L.DOW[d.dow]+'): '+money(d.total)}}));
+    var bd=dl.slice().sort(function(a,b){return b.total-a.total})[0];
+    $('cap-day').textContent=bd?('Mejor día: '+L.DOW[bd.dow]+' '+L.labelDay(bd.date)+' con '+money(bd.total)):'';
+    // Por día de la semana
+    var ax=['Lu','Ma','Mi','Ju','Vi','Sá','Do'];
+    cols('cols-wk','axis-wk',r.wk.map(function(w,i){return {v:w.avg,ax:ax[i],tip:cap(L.DOW[w.dow])+': '+money(w.avg)+' por día abierto ('+w.n+' día'+(w.n===1?'':'s')+')'}}));
+    var bw=r.wk.slice().sort(function(a,b){return b.avg-a.avg})[0];
+    $('cap-wk').textContent=bw&&bw.avg?('Promedio por día abierto. Más fuerte: '+L.DOW[bw.dow]+' con '+money(bw.avg)):'';
+
+    // Top
+    var top=r.prods.slice().sort(function(a,b){return b.units-a.units}).slice(0,7);
+    var mu=top.length?top[0].units:1;
+    $('top').innerHTML=top.map(function(p){return '<div class="hb"><span class="nm" title="'+esc(p.name)+'">'+esc(p.name)+'</span><span class="tr"><span class="fi" style="width:'+(p.units/mu*100)+'%"></span></span><span class="mono">'+Math.round(p.units)+'</span></div>'}).join('');
+
+    // Pagos
+    var pc=['var(--bar-hi)','var(--bar)','var(--warn)','var(--muted)'];
+    $('cap-pay').textContent='Participación en las ventas pagadas';
+    $('pay').innerHTML=r.pays.length&&r.ptotal?('<div class="pay">'+r.pays.map(function(p,i){return '<i style="width:'+(p.total/r.ptotal*100)+'%;background:'+pc[i%4]+'" title="'+esc(p.name)+'"></i>'}).join('')+'</div><div class="legend">'+r.pays.map(function(p,i){return '<span><b style="background:'+pc[i%4]+'"></b>'+esc(p.name)+' <span class="mono">'+pct(p.total/r.ptotal)+'</span></span>'}).join('')+'</div>'):'<p class="empty">Sube el Reporte de ventas o Ventas por método de pago para ver cómo pagan.</p>';
+
+    // Margen
+    var basis=r.costIncl?'con IGV':'sin IGV';
+    var mp=r.margin.slice().sort(function(a,b){
+      if(a.hasCost!==b.hasCost) return a.hasCost?-1:1;
+      return a.hasCost?a.marginPct-b.marginPct:b.importe-a.importe});
+    $('cap-margin').textContent=mp.length?('Precio promedio y costo por unidad, ambos '+basis+'. De menor a mayor margen.'):'';
+    $('t-margin').innerHTML=mp.length?('<thead><tr><th>Producto</th><th class="r">Precio prom.</th><th class="r">Costo</th><th class="r">Margen S/</th><th class="r">Margen %</th><th>Estado</th></tr></thead><tbody>'+mp.map(function(p){
+      if(!p.hasCost) return '<tr><td>'+esc(p.name)+'</td><td class="r mono">'+money2(p.avgPrice)+'</td><td class="r mono">—</td><td class="r mono">—</td><td class="r mono">—</td><td><span class="pill none">Sin costo</span></td></tr>';
+      var c=p.marginPct<r.minM?'crit':(p.marginPct<r.minM+0.1?'warn':'good'),t=p.marginPct<r.minM?'Bajo':(p.marginPct<r.minM+0.1?'Justo':'Sano');
+      return '<tr><td>'+esc(p.name)+'</td><td class="r mono">'+money2(p.avgPrice)+'</td><td class="r mono">'+money2(p.unitCost)+'</td><td class="r mono">'+money2(p.avgPrice-p.unitCost)+'</td><td class="r mono">'+pct(p.marginPct)+'</td><td><span class="pill '+c+'">'+t+'</span></td></tr>'}).join('')+'</tbody>')
+      :'<tbody><tr><td><p class="empty">Sube el reporte Ganancias para ver el margen de cada producto.</p></td></tr></tbody>';
+
+    // Stock
+    $('cap-stock').textContent=r.stock.length?'Del que antes se acaba al más holgado. Los días se calculan con lo que se vendió por día abierto en el periodo.':'';
+    $('t-stock').innerHTML=r.stock.length?('<thead><tr><th>Producto</th><th class="r">Stock</th><th class="r">Se vende por día</th><th class="r">Alcanza para</th><th>Estado</th></tr></thead><tbody>'+r.stock.map(function(s){
+      return '<tr><td>'+esc(s.name)+'</td><td class="r mono">'+(s.stock===null?'—':s.stock.toLocaleString('es-PE'))+'</td><td class="r mono">'+(s.rate?oneDec(s.rate):'—')+'</td><td class="r mono">'+(s.cover===null?'—':oneDec(s.cover)+' días')+'</td><td><span class="pill '+s.status+'">'+s.label+'</span></td></tr>'}).join('')+'</tbody>')
+      :'<tbody><tr><td><p class="empty">Sube el reporte Stock de productos para ver para cuántos días alcanza cada uno.</p></td></tr></tbody>';
+  }
+
+  function showErr(msg){var e=$('err');if(msg){e.textContent=msg;e.hidden=false}else{e.hidden=true}}
+
+  function loadSample(){
+    state.tables=L.readSheets(L.makeSample()).tables;
+    state.meta={sample:true};
+    showErr(null);render();
+  }
+
+  function onFiles(ev){
+    var input=ev.target,files=[].slice.call(input.files||[]);if(!files.length)return;
+    var acc={ventas:[],ganancias:[],pagos:[],stock:[]},unknown=[],failed=[],names=[],pending=files.length;
+    function done(){
+      if(--pending)return;
+      input.value='';
+      var got=Object.keys(acc).filter(function(k){return acc[k].length});
+      if(!got.length){
+        showErr('No reconocí ninguna hoja'+(failed.length?' ('+failed.length+' archivo'+(failed.length>1?'s':'')+' no se pudo'+(failed.length>1?'ieron':'')+' abrir)':'')+'. Sube los reportes de Negosy en Excel: Ganancias, Ventas por productos, Reporte de ventas o Stock de productos.');
+        return;
+      }
+      if(!acc.ventas.length&&!acc.ganancias.length){
+        showErr('Falta un reporte de ventas. Sube Ganancias o Ventas por productos junto con los demás.');
+        return;
+      }
+      var msgs=[];
+      if(unknown.length) msgs.push('No reconocí: '+unknown.slice(0,4).join(', ')+'.');
+      if(failed.length) msgs.push('No pude abrir: '+failed.join(', ')+'.');
+      showErr(msgs.length?msgs.join(' ')+' El resto se cargó.':null);
+      state.tables=acc;state.meta={sample:false,name:names.join(', ')};
+      render();
+    }
+    files.forEach(function(f){
+      var fr=new FileReader();
+      fr.onload=function(){
+        try{
+          var wb=XLSX.read(new Uint8Array(fr.result),{type:'array',cellDates:true});
+          var rw=L.readWorkbook(XLSX,wb);
+          Object.keys(acc).forEach(function(k){acc[k]=acc[k].concat(rw.tables[k])});
+          rw.unknown.forEach(function(n){unknown.push(f.name+' › '+n)});
+          names.push(f.name);
+        }catch(e){failed.push(f.name)}
+        done();
+      };
+      fr.onerror=function(){failed.push(f.name);done()};
+      fr.readAsArrayBuffer(f);
+    });
+  }
+
+  $('file').addEventListener('change',onFiles);
+  $('reset').addEventListener('click',loadSample);
+  ['igv-ex','igv-in','min-margin'].forEach(function(id){$(id).addEventListener('input',function(){if(state.tables)render()})});
+  loadSample();
+})();
+</script>
+
+</body></html>
