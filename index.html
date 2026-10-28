@@ -107,26 +107,22 @@ details.how p{margin:0}
   <section class="banner sample" id="banner" aria-label="Datos cargados">
     <div class="row">
       <p id="banner-msg"></p>
-      <div class="acts">
-        <label style="position:relative"><input type="file" id="file" accept=".xlsx,.xls,.xlsm,.csv" multiple><span class="btn" role="button">Cargar reportes de Negosy</span></label>
-        <button type="button" class="btn alt" id="reset" hidden>Ver el ejemplo</button>
-      </div>
     </div>
     <ul class="chips" id="chips"></ul>
   </section>
   <p class="err" id="err" role="alert" hidden></p>
 
   <details class="how">
-    <summary>Qué reportes de Negosy subir</summary>
+    <summary>Qué reportes de Negosy lo alimentan</summary>
     <div class="in">
-      <p>En Negosy abre Reportes, elige el reporte, filtra el rango de fechas y expórtalo a Excel. Puedes subir varios archivos a la vez. El tablero reconoce cada uno por los nombres de sus columnas, no por su posición.</p>
+      <p>Con los datos reales del bar, el tablero se alimenta de reportes de Negosy exportados a Excel. Esta demo ya trae un ejemplo de cada uno.</p>
       <ul>
         <li><b>Ganancias</b> (recomendado): da el costo y la ganancia de cada venta. Alimenta la tabla de margen.</li>
-        <li><b>Ventas por productos</b>: ventas por día y lo más vendido. Si no lo subes, se usa Ganancias.</li>
+        <li><b>Ventas por productos</b>: ventas por día y lo más vendido. Si falta, se usa Ganancias.</li>
         <li><b>Reporte de ventas</b> o <b>Ventas por método de pago</b>: muestra cómo pagan.</li>
         <li><b>Stock de productos</b>: calcula para cuántos días alcanza cada producto.</li>
       </ul>
-      <p>Las columnas esperadas salen del centro de ayuda de Negosy y falta confirmarlas con un archivo exportado de verdad. Si un archivo no se reconoce, el aviso indica qué falta.</p>
+      <p>Las columnas esperadas salen del centro de ayuda de Negosy y falta confirmarlas con un archivo exportado de verdad.</p>
     </div>
   </details>
 
@@ -155,10 +151,9 @@ details.how p{margin:0}
   </section>
   <section class="card"><h2>Margen por producto</h2><p class="cap" id="cap-margin"></p><div class="tw"><table id="t-margin"></table></div></section>
   <section class="card"><h2>Stock y días de venta</h2><p class="cap" id="cap-stock"></p><div class="tw"><table id="t-stock"></table></div></section>
-  <p class="foot">Los cálculos se hacen en tu navegador. Los archivos que cargas no se envían ni se guardan en ningún servidor.</p>
+  <p class="foot">Demo con datos de ejemplo inventados. Esta página no recibe ni guarda información.</p>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script id="logic">
 /* ---------- Lógica de datos (sin DOM) ---------- */
 var BarLogic=(function(){
@@ -410,9 +405,8 @@ if(typeof module!=='undefined') module.exports=BarLogic;
     // Banner y reportes cargados
     var b=$('banner');b.className='banner'+(meta.sample?' sample':'');
     $('banner-msg').innerHTML=meta.sample
-      ?'<span class="tag s">Datos de ejemplo</span> Estas cifras son inventadas para mostrar cómo se ve el tablero. Sube tus reportes de Negosy en Excel para ver los números reales.'
+      ?'<span class="tag s">Demo</span> Datos de ejemplo inventados para mostrar cómo se ve el tablero. En esta demo no se pueden cargar archivos.'
       :'<span class="tag r">Datos reales</span> Archivos: <b>'+esc(meta.name)+'</b>';
-    $('reset').hidden=!!meta.sample;
     $('chips').innerHTML=['ganancias','ventas','pagos','stock'].map(function(kind){
       var n=T[kind].length;
       return '<li class="chip'+(n?' on':'')+'"><b>'+KLABEL[kind]+'</b> '+(n?'· '+n.toLocaleString('es-PE')+' filas':'· falta')+'</li>'}).join('');
@@ -491,47 +485,6 @@ if(typeof module!=='undefined') module.exports=BarLogic;
     showErr(null);render();
   }
 
-  function onFiles(ev){
-    var input=ev.target,files=[].slice.call(input.files||[]);if(!files.length)return;
-    var acc={ventas:[],ganancias:[],pagos:[],stock:[]},unknown=[],failed=[],names=[],pending=files.length;
-    function done(){
-      if(--pending)return;
-      input.value='';
-      var got=Object.keys(acc).filter(function(k){return acc[k].length});
-      if(!got.length){
-        showErr('No reconocí ninguna hoja'+(failed.length?' ('+failed.length+' archivo'+(failed.length>1?'s':'')+' no se pudo'+(failed.length>1?'ieron':'')+' abrir)':'')+'. Sube los reportes de Negosy en Excel: Ganancias, Ventas por productos, Reporte de ventas o Stock de productos.');
-        return;
-      }
-      if(!acc.ventas.length&&!acc.ganancias.length){
-        showErr('Falta un reporte de ventas. Sube Ganancias o Ventas por productos junto con los demás.');
-        return;
-      }
-      var msgs=[];
-      if(unknown.length) msgs.push('No reconocí: '+unknown.slice(0,4).join(', ')+'.');
-      if(failed.length) msgs.push('No pude abrir: '+failed.join(', ')+'.');
-      showErr(msgs.length?msgs.join(' ')+' El resto se cargó.':null);
-      state.tables=acc;state.meta={sample:false,name:names.join(', ')};
-      render();
-    }
-    files.forEach(function(f){
-      var fr=new FileReader();
-      fr.onload=function(){
-        try{
-          var wb=XLSX.read(new Uint8Array(fr.result),{type:'array',cellDates:true});
-          var rw=L.readWorkbook(XLSX,wb);
-          Object.keys(acc).forEach(function(k){acc[k]=acc[k].concat(rw.tables[k])});
-          rw.unknown.forEach(function(n){unknown.push(f.name+' › '+n)});
-          names.push(f.name);
-        }catch(e){failed.push(f.name)}
-        done();
-      };
-      fr.onerror=function(){failed.push(f.name);done()};
-      fr.readAsArrayBuffer(f);
-    });
-  }
-
-  $('file').addEventListener('change',onFiles);
-  $('reset').addEventListener('click',loadSample);
   ['igv-ex','igv-in','min-margin'].forEach(function(id){$(id).addEventListener('input',function(){if(state.tables)render()})});
   loadSample();
 })();
