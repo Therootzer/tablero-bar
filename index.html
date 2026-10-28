@@ -87,12 +87,6 @@ tr:last-child td{border-bottom:0}
 .pill{display:inline-block;font-size:12px;font-weight:600;padding:2px 9px;border-radius:99px}
 .pill.good{background:var(--good-bg);color:var(--good)} .pill.warn{background:var(--warn-bg);color:var(--warn)} .pill.crit{background:var(--crit-bg);color:var(--crit)} .pill.none{background:var(--bg);color:var(--muted)}
 .empty{color:var(--muted);margin:0}
-details.how{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 18px}
-details.how summary{cursor:pointer;font-weight:600}
-details.how summary:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
-details.how .in{display:flex;flex-direction:column;gap:10px;margin-top:10px}
-details.how ol,details.how ul{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:4px}
-details.how p{margin:0}
 .foot{color:var(--muted);font-size:13px;margin:0}
 @media (max-width:760px){.kpis{grid-template-columns:1fr 1fr}.grid2{grid-template-columns:1fr}.set{grid-template-columns:1fr}}
 @media (prefers-reduced-motion:no-preference){.col,.hb .fi{transition:height .25s ease,width .25s ease}}
@@ -112,19 +106,6 @@ details.how p{margin:0}
   </section>
   <p class="err" id="err" role="alert" hidden></p>
 
-  <details class="how">
-    <summary>Qué reportes de Negosy lo alimentan</summary>
-    <div class="in">
-      <p>Con los datos reales del bar, el tablero se alimenta de reportes de Negosy exportados a Excel. Esta demo ya trae un ejemplo de cada uno.</p>
-      <ul>
-        <li><b>Ganancias</b> (recomendado): da el costo y la ganancia de cada venta. Alimenta la tabla de margen.</li>
-        <li><b>Ventas por productos</b>: ventas por día y lo más vendido. Si falta, se usa Ganancias.</li>
-        <li><b>Reporte de ventas</b> o <b>Ventas por método de pago</b>: muestra cómo pagan.</li>
-        <li><b>Stock de productos</b>: calcula para cuántos días alcanza cada producto.</li>
-      </ul>
-      <p>Las columnas esperadas salen del centro de ayuda de Negosy y falta confirmarlas con un archivo exportado de verdad.</p>
-    </div>
-  </details>
 
   <section class="set" aria-label="Ajustes del cálculo">
     <fieldset>
@@ -133,10 +114,10 @@ details.how p{margin:0}
       <label><input type="radio" name="igv" id="igv-in" value="in"> Con IGV</label>
     </fieldset>
     <div>
-      <label for="min-margin" style="font-weight:600;display:block;margin-bottom:6px">Margen mínimo aceptable</label>
+      <label for="min-margin" style="font-weight:600;display:block;margin-bottom:6px">Margen ideal</label>
       <input type="number" id="min-margin" min="0" max="95" step="5" value="60"> <span class="mono">%</span>
     </div>
-    <p class="hint">Negosy calcula la ganancia como Importe menos Costo, y el Importe incluye IGV. Si tus costos no incluyen IGV, la ganancia de Negosy sale más alta que la real. El margen mínimo es un valor de ejemplo hasta que el dueño defina el suyo.</p>
+    <p class="hint">Negosy calcula la ganancia como Importe menos Costo, y el Importe incluye IGV. Si tus costos no incluyen IGV, la ganancia de Negosy sale más alta que la real. El margen ideal es un valor de ejemplo hasta que el dueño defina el suyo.</p>
   </section>
 
   <section class="kpis" id="kpis" aria-label="Resumen"></section>
@@ -428,7 +409,7 @@ if(typeof module!=='undefined') module.exports=BarLogic;
       if(tp) notes.push('Lo más vendido es <b>'+esc(tp.name)+'</b>, con '+Math.round(tp.units).toLocaleString('es-PE')+' unidades.');
     }
     var wc=r.margin.filter(function(g){return g.hasCost}).sort(function(a,b){return a.marginPct-b.marginPct});
-    if(wc.length&&wc[0].marginPct<r.minM) notes.push('<b>'+esc(wc[0].name)+'</b> deja solo '+pct(wc[0].marginPct)+' de margen, bajo tu mínimo de '+pct(r.minM)+'. Revisa su precio o su costo.');
+    if(wc.length&&wc[0].marginPct<r.minM) notes.push('<b>'+esc(wc[0].name)+'</b> deja solo '+pct(wc[0].marginPct)+' de margen, bajo tu margen ideal de '+pct(r.minM)+'. Revisa su precio o su costo.');
     var nc=r.margin.filter(function(g){return !g.hasCost});
     if(nc.length) notes.push(nc.length+' producto'+(nc.length>1?'s':'')+' sin costo cargado en Negosy ('+esc(nc.slice(0,3).map(function(g){return g.name}).join(', '))+(nc.length>3?'…':'')+'). Su margen no se puede calcular.');
     if(!r.costIncl&&k.marginPct!==null&&k.negosyProfit-k.profit>0.5) notes.push('Negosy muestra '+money(k.negosyProfit)+' de ganancia en los productos con costo. Si tus costos no incluyen IGV, la real es '+money(k.profit)+'.');
